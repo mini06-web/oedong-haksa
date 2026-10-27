@@ -99,6 +99,7 @@
 
   // ---------- 그리기 ----------
   function render() {
+    if (window.ExtUI) ExtUI.render(); // 내부 비교 탭도 이 시간표를 씀
     var el = $('#staff'); if (!el || $('#tab-staff').hidden) return;
     var st = api.getState(), r = api.getResult(), h = '';
     var canImport = api.canWrite();
@@ -282,6 +283,7 @@
   window.TTUI = {
     init: function (a) { api = a; events(); },
     load: load,
-    render: render
+    render: render,
+    data: function () { return tt; }
   };
 })();

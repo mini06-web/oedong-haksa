@@ -174,7 +174,13 @@
       if (!VIEW) store('haksa:last', String(year));
       renderNotice();
       if (!VIEW && window.TTUI) TTUI.load(year);
+      if (!VIEW && window.ExtUI) ExtUI.load();
     });
+  }
+  // 다른 학년도 학사일정(행사 템플릿용): 시트 → 이 브라우저 순. 없으면 null
+  function otherYear(y) {
+    var cp = cloud === 'on' ? ST.get(y).catch(function () { return null; }) : Promise.resolve(null);
+    return cp.then(function (c) { if (c) return E.sanitize(c.state); var lp = localLoad(y); return lp ? lp.state : null; });
   }
   // 비밀번호 확인 후 쓰기 가능 상태로 바꾸고, 브라우저에만 있던 수정이 있으면 올린다
   function connect(pw, remember) {
@@ -187,6 +193,7 @@
         else if (o.push) save();
         renderNotice();
         if (window.TTUI) TTUI.load(state.year);
+        if (window.ExtUI) ExtUI.load();
         return true;
       });
     }, function (e) { cloudFail(e); renderNotice(); throw e; });
@@ -249,6 +256,7 @@
     if (!$('#tab-weeks').hidden) renderWeeks();
     if (!$('#tab-daily').hidden) renderDaily();
     if (!$('#tab-staff').hidden && window.TTUI) TTUI.render();
+    if (window.ExtUI) ExtUI.render();
     if (!$('#tab-settings').hidden && !keepSettings) renderSettings();
     if (selected) renderDrawer();
     else if (fixMode) renderFix();
@@ -928,11 +936,12 @@
     hideDailyDate();
     if (tab === 'prev') { go('settings'); var p = $('[data-prev="2"]'); if (p) p.focus(); return; }
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
-    ['year', 'daily', 'weeks', 'staff', 'settings'].forEach(function (k) { $('#tab-' + k).hidden = k !== tab; });
+    ['year', 'daily', 'weeks', 'staff', 'compare', 'tools', 'settings'].forEach(function (k) { var t = $('#tab-' + k); if (t) t.hidden = k !== tab; });
     if (selected) closeDrawer();
     if (tab === 'weeks') renderWeeks();
     if (tab === 'daily') renderDaily();
     if (tab === 'staff' && window.TTUI) TTUI.render();
+    if ((tab === 'compare' || tab === 'tools') && window.ExtUI) ExtUI.render();
     if (tab === 'settings') renderSettings();
   }
 
@@ -1043,6 +1052,11 @@
       canWrite: function () { return canWrite && cloud === 'on'; }, cloudState: function () { return cloud; },
       esc: esc, fmt: fmt, md: md
     });
+    if (!VIEW && window.ExtUI) ExtUI.init({
+      getState: function () { return state; }, getResult: function () { return result; }, commit: commit,
+      canWrite: function () { return canWrite && cloud === 'on'; }, cloudState: function () { return cloud; },
+      otherYear: otherYear, esc: esc, fmt: fmt, md: md
+    });
     sel.addEventListener('change', function () { undoState = null; if (VIEW) store('haksa:viewYear', sel.value); openYear(+sel.value); });
     $('#schoolName').addEventListener('change', save);
     $('#schoolName').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
@@ -1103,7 +1117,7 @@
   // 보기 전용 페이지: 편집 탭·사용법·보충 서랍을 숨기고 학교 이름을 읽기 전용으로
   function viewOnly() {
     document.body.classList.add('view-only');
-    ['daily', 'staff', 'settings'].forEach(function (k) { var b = $('.tabs [data-tab="' + k + '"]'); if (b) b.remove(); });
+    ['daily', 'staff', 'compare', 'tools', 'settings'].forEach(function (k) { var b = $('.tabs [data-tab="' + k + '"]'); if (b) b.remove(); });
     $('#btnHelp').hidden = true;
     $('#schoolName').readOnly = true;
     $('#saveState').title = '시트에 저장된 학사일정을 보여 줍니다';

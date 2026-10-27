@@ -49,6 +49,12 @@
     return req('POST', null, { action: 'ttSave', pw: password(), year: year, data: data, base: base || 0, force: !!force, device: device() })
       .then(function (o) { return o.conflict ? { conflict: true, remote: o.remote } : { ok: true, savedAt: o.savedAt }; });
   }
+  // 행사 템플릿(학년도와 무관): null | { data:[…], savedAt, savedBy }
+  function tplGet() { return req('POST', null, { action: 'tplGet', pw: password() }).then(function (o) { return o.data || null; }); }
+  function tplSave(data, base, force) {
+    return req('POST', null, { action: 'tplSave', pw: password(), data: data, base: base || 0, force: !!force, device: device() })
+      .then(function (o) { return o.conflict ? { conflict: true, remote: o.remote } : { ok: true, savedAt: o.savedAt }; });
+  }
   // 「외동 게시판」 기초시간표 탭 값: { title, sheet, values }
   function board() { return req('POST', null, { action: 'board', pw: password() }); }
   // 비밀번호 확인: true | false (연결 실패는 reject)
@@ -86,7 +92,7 @@
 
   window.Store = {
     configured: function () { return !!url(); },
-    list: list, get: get, save: save, check: check, ttGet: ttGet, ttSave: ttSave, board: board,
+    list: list, get: get, save: save, check: check, ttGet: ttGet, ttSave: ttSave, board: board, tplGet: tplGet, tplSave: tplSave,
     password: password, setPassword: setPassword, device: device, setDevice: setDevice,
     fileName: fileName, download: download, downloadBlob: downloadBlob, readFile: readFile
   };

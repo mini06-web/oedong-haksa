@@ -9,6 +9,7 @@
  *               { action:'ttGet', pw, year }   → 그 학년도 시간표(교사 이름이 있어 비밀번호 필요)
  *               { action:'ttSave', pw, year, data, base, force, device } → 시간표 저장
  *               { action:'board', pw } → 「외동 게시판」 기초시간표 탭 값(화면이 해석)
+ *               { action:'tplGet', pw } / { action:'tplSave', pw, data, base, force, device } → 행사 템플릿(학년도와 무관)
  *    base = 화면이 마지막으로 받은 savedAt. 시트에 그보다 새 저장본이 있으면(다른 곳에서 저장)
  *    저장하지 않고 conflict 로 알립니다. force=true 이면 덮어씁니다.
  *
@@ -19,6 +20,7 @@
  * 시트 탭(용도별로 나눔. 나중에 온라인 교무실과 합칠 때 그대로 가져갈 수 있게):
  *   학사일정  학년도마다 한 줄: 학년도 | savedAt | 저장 시각 | 저장한 기기 | 조각 수 | JSON…
  *   시간표    학년도마다 한 줄(같은 모양): 1·2학기 학급 시간표와 전담 배정
+ *   행사템플릿 한 줄(같은 모양, 첫 칸 1): 해마다 되풀이하는 행사와 날짜 규칙
  *   저장기록  저장·실패 기록
  *   안내      각 탭 설명
  */
@@ -28,6 +30,8 @@ var BOARD_ID = '1d26nIbonPBHVzN66qqigv9F_uGtAL-_yCQdAdjy-drs'; // 2026 외동 �
 var BOARD_ROWS = 120, BOARD_COLS = 60;
 var SHEET_DATA = '학사일정';
 var SHEET_TT = '시간표';
+var SHEET_TPL = '행사템플릿';
+var TPL_KEY = 1;          // 행사템플릿 탭은 학년도 대신 1 한 줄만 쓴다
 var SHEET_LOG = '저장기록';
 var SHEET_INFO = '안내';
 var DATA_HEADER = ['학년도', 'savedAt', '저장 시각', '저장한 기기', 'JSON 조각 수', 'JSON'];
@@ -73,6 +77,8 @@ function doPost(e) {
     }
     if (body.action === 'ttSave') return json_(saveTimetable_(body));
     if (body.action === 'board') return json_(Object.assign({ ok: true }, readBoard_()));
+    if (body.action === 'tplGet') return json_({ ok: true, data: readTemplates_() });
+    if (body.action === 'tplSave') return json_(saveTemplates_(body));
     return json_({ ok: false, error: '알 수 없는 요청' });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
@@ -95,7 +101,12 @@ function saveTimetable_(body) {
   return saveRow_(SHEET_TT, y, tt, body, '시간표 ', function () { return readTimetable_(y); });
 }
 
-// 학년도 한 줄 저장(학사일정·시간표 공통). remote(): 충돌 때 돌려줄 최신본
+function saveTemplates_(body) {
+  if (!Array.isArray(body.data)) return { ok: false, error: '행사 템플릿 자료 형식이 아닙니다' };
+  return saveRow_(SHEET_TPL, TPL_KEY, body.data, body, '행사템플릿 ', readTemplates_);
+}
+
+// 학년도 한 줄 저장(학사일정·시간표·행사템플릿 공통). remote(): 충돌 때 돌려줄 최신본
 function saveRow_(name, y, obj, body, what, remote) {
   var text = JSON.stringify(obj);
   if (text.length > MAX_JSON) return { ok: false, error: '자료가 너무 큽니다' };
@@ -137,6 +148,10 @@ function readYear_(y) {
 function readTimetable_(y) {
   var r = readRow_(SHEET_TT, y);
   return r && { year: y, data: r.obj, savedAt: r.savedAt, savedBy: r.savedBy };
+}
+function readTemplates_() {
+  var r = readRow_(SHEET_TPL, TPL_KEY);
+  return r && { data: r.obj, savedAt: r.savedAt, savedBy: r.savedBy };
 }
 function readRow_(name, y) {
   var sh = sheet_(name), row = findRow_(sh, y);
@@ -226,6 +241,13 @@ function setup() {
   tt.getRange('C:C').setNumberFormat('yyyy-mm-dd hh:mm:ss');
   tt.setColumnWidth(6, 300);
 
+  var tpl = ss.getSheetByName(SHEET_TPL) || ss.insertSheet(SHEET_TPL);
+  tpl.getRange(1, 1, 1, DATA_HEADER.length).setValues([['구분'].concat(DATA_HEADER.slice(1))]).setFontWeight('bold').setBackground('#1E3A5F').setFontColor('#ffffff');
+  tpl.setFrozenRows(1);
+  tpl.getRange('B:B').setNumberFormat('0');
+  tpl.getRange('C:C').setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  tpl.setColumnWidth(6, 300);
+
   var log = ss.getSheetByName(SHEET_LOG) || ss.insertSheet(SHEET_LOG);
   log.getRange(1, 1, 1, LOG_HEADER.length).setValues([LOG_HEADER]).setFontWeight('bold').setBackground('#EEF2F7');
   log.setFrozenRows(1);
@@ -234,10 +256,11 @@ function setup() {
 
   var info = ss.getSheetByName(SHEET_INFO) || ss.insertSheet(SHEET_INFO);
   info.clear();
-  info.getRange(1, 1, 7, 2).setValues([
+  info.getRange(1, 1, 8, 2).setValues([
     ['탭', '설명'],
     [SHEET_DATA, '학년도마다 한 줄. 계산기가 자동으로 씁니다. 손으로 고치지 마세요(JSON이 깨지면 그 학년도를 열 수 없습니다).'],
     [SHEET_TT, '학년도마다 한 줄. 1·2학기 학급 시간표와 전담 배정(교사 이름 포함, 비밀번호로만 읽힘). 손으로 고치지 마세요.'],
+    [SHEET_TPL, '한 줄. 해마다 되풀이하는 행사와 날짜 규칙(계산기 「학사 도구」 탭에서 고침). 손으로 고치지 마세요.'],
     [SHEET_LOG, '저장·충돌·비밀번호 실패 기록. 최근 ' + LOG_KEEP + '줄만 남깁니다.'],
     [SHEET_INFO, '이 설명.'],
     ['비밀번호', 'Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성 EDIT_PASSWORD'],

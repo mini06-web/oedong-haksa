@@ -118,6 +118,7 @@
       var vals = {}; [2, 4, 6].forEach(function (g) { var v = pf.values && int(pf.values[g], 0, 5000); if (v !== null && v !== undefined) vals[g] = v; });
       s.prevYearFrom = { year: int(pf.year, 2000, 2100), values: vals, confirmed: !!pf.confirmed };
     }
+    if (src.ext && typeof src.ext === 'object' && !Array.isArray(src.ext)) s.ext = clone(src.ext); // 학교별 확장(ext.js), 계산에 쓰지 않음
     return s;
   }
 

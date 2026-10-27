@@ -22,6 +22,8 @@
     <button role="tab" data-tab="daily" aria-selected="false">일별 시수</button>
     <button role="tab" data-tab="weeks" aria-selected="false">주별 시수</button>
     <button role="tab" data-tab="staff" aria-selected="false">담임·전담</button>
+    <button role="tab" data-tab="compare" aria-selected="false">내부 비교</button>
+    <button role="tab" data-tab="tools" aria-selected="false">학사 도구</button>
     <button role="tab" data-tab="settings" aria-selected="false">설정</button>
   </nav>
   <div class="actions">
@@ -55,6 +57,14 @@
 
   <section id="tab-staff" class="tab" hidden>
     <div class="staff" id="staff"></div>
+  </section>
+
+  <section id="tab-compare" class="tab" hidden>
+    <div class="staff" id="compare"></div>
+  </section>
+
+  <section id="tab-tools" class="tab" hidden>
+    <div class="staff" id="tools"></div>
   </section>
 
   <section id="tab-settings" class="tab" hidden>
@@ -213,5 +223,7 @@
 <script src="export.js"></script>
 <script src="timetable.js"></script>
 <script src="ttui.js"></script>
+<script src="ext.js"></script>
+<script src="extui.js"></script>
 <script src="app.js"></script>
 </body></html>

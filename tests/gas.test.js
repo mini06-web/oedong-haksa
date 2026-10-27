@@ -19,9 +19,9 @@ check('처음에는 학년도 목록이 비어 있음', function () {
   assert.deepStrictEqual(gas.get({ action: 'list' }), { ok: true, years: [] });
   assert.strictEqual(gas.get({ action: 'get', year: '2027' }).data, null);
 });
-check('setup: 학사일정·시간표·저장기록·안내 탭을 만들고 빈 시트1은 지움', function () {
+check('setup: 학사일정·시간표·행사템플릿·저장기록·안내 탭을 만들고 빈 시트1은 지움', function () {
   gas.setup();
-  assert.deepStrictEqual(gas.sheets.map(function (s) { return s.name; }).sort(), ['시간표', '안내', '저장기록', '학사일정']);
+  assert.deepStrictEqual(gas.sheets.map(function (s) { return s.name; }).sort(), ['시간표', '안내', '저장기록', '학사일정', '행사템플릿']);
 });
 check('비밀번호가 틀리면 확인·저장 모두 거부', function () {
   assert.deepStrictEqual(gas.post({ action: 'check', pw: 'nope' }), { ok: false, error: 'auth' });
@@ -132,6 +132,20 @@ check('비밀번호를 20번 틀리면 맞는 비밀번호도 잠시 막음', fu
   var g2 = createGas();
   for (var i = 0; i < 20; i++) g2.post({ action: 'check', pw: 'x' });
   assert.strictEqual(g2.post({ action: 'check', pw: PW }).error, 'auth');
+});
+check('행사 템플릿: 비밀번호로 읽고 쓰며, 다른 곳 저장이 더 새로우면 충돌', function () {
+  assert.strictEqual(gas.post({ action: 'tplGet', pw: 'x' }).error, 'auth');
+  assert.strictEqual(gas.post({ action: 'tplGet', pw: PW }).data, null);
+  var tpl = [{ name: '운동회', type: 'ceremony', periods: { 1: 4 }, reason: '', rule: { kind: 'nth', month: 5, nth: 2, dow: 5 } }];
+  var a = gas.post({ action: 'tplSave', pw: PW, data: tpl, base: 0, device: '학교' });
+  assert.ok(a.ok);
+  var d = gas.post({ action: 'tplGet', pw: PW }).data;
+  assert.deepStrictEqual(d.data, tpl); assert.strictEqual(d.savedAt, a.savedAt);
+  var c = gas.post({ action: 'tplSave', pw: PW, data: [], base: a.savedAt - 1, device: '집' });
+  assert.ok(c.conflict && c.remote.data.length === 1);
+  assert.ok(gas.post({ action: 'tplSave', pw: PW, data: [], base: a.savedAt, device: '집' }).ok);
+  assert.strictEqual(gas.post({ action: 'tplSave', pw: PW, data: 'x' }).ok, false);
+  assert.strictEqual(gas.get({ action: 'list' }).years.some(function (y) { return y.year === 1; }), false, '학년도 목록에 섞이지 않음');
 });
 check('EDIT_PASSWORD 미설정이면 오류 메시지', function () {
   var g3 = createGas({ password: '' });
