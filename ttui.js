@@ -56,7 +56,8 @@
     pending = true; clearTimeout(timer); info = '저장 중…';
     timer = setTimeout(function () { push(false); }, 800);
   }
-  function push(force) {
+  // retry: 연결 문제로 실패하면 몇 초 뒤 한 번 더 시도(GAS가 잠깐 느리거나 끊길 때)
+  function push(force, retry) {
     var y = year;
     chain = chain.then(function () {
       pending = false;
@@ -67,12 +68,19 @@
         base = res.savedAt; if (!pending) localSave(y, tt, false);
         info = '시트에 저장 ' + hm(res.savedAt); updateInfo();
       }, function (e) {
-        info = '시트 저장 실패' + (e && e.message === 'auth' ? '(비밀번호)' : '') + ' · 이 브라우저에 저장됨'; updateInfo();
+        if (y !== year) return;
+        var auth = e && e.message === 'auth';
+        if (!auth && !retry) { info = '시트 저장 재시도 중…'; updateInfo(); setTimeout(function () { if (y === year && !pending) push(force, true); }, 3000); return; }
+        info = '시트 저장 실패' + (auth ? '(비밀번호)' : e && e.detail ? '(' + e.detail + ')' : '(연결)') + ' · 이 브라우저에 저장됨'; updateInfo(true);
       });
     });
     return chain;
   }
-  function updateInfo() { var el = $('#ttInfo'); if (el) el.textContent = info; }
+  function updateInfo(failed) {
+    var el = $('#ttInfo'); if (!el) return;
+    el.textContent = info;
+    if (failed && api.canWrite()) el.insertAdjacentHTML('beforeend', ' <button class="btn small" data-tt="retry">다시 저장</button>');
+  }
 
   // ---------- 게시판에서 가져오기 ----------
   function importBoard(which) {
@@ -250,6 +258,8 @@
         copyArmed = null;
         if (k === '2to1') tt.sem[1] = clone(tt.sem[2]); else tt.sem[2] = clone(tt.sem[1]);
         save(); render();
+      } else if (a === 'retry') {
+        info = '저장 중…'; updateInfo(); push(false, true);
       } else if (a === 'takeRemote' && conflict) {
         tt = T.sanitize(conflict.data); base = conflict.savedAt; conflict = null; localSave(year, tt, false); info = '시트의 시간표를 불러옴'; render();
       } else if (a === 'takeMine' && conflict) {
