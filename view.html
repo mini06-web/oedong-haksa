@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학사일정 보기 · 김해외동초</title>
+<meta name="author" content="김해외동초등학교 (원작: 서울신답초등학교 정용석)">
+<meta name="description" content="내년도 학사일정을 짜면서 수업일수 190일과 학년군 최소 시수를 바로 확인하는 교사용 계산기">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E3A5F">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <input id="schoolName" class="school" aria-label="학교 이름" placeholder="학교 이름">
+    <select id="yearSel" aria-label="학년도"></select>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="year" aria-selected="true">연간 한눈에</button>
+    <button role="tab" data-tab="daily" aria-selected="false">일별 시수</button>
+    <button role="tab" data-tab="weeks" aria-selected="false">주별 시수</button>
+    <button role="tab" data-tab="settings" aria-selected="false">설정</button>
+  </nav>
+  <div class="actions">
+    <button id="btnHelp" class="btn" type="button">사용법</button>
+    <button id="saveState" class="btn text savestate" title="저장 설정 보기"></button>
+    <button id="btnExport" class="btn primary" title="달력·일별·주별 3개 시트 엑셀 내려받기">엑셀 내보내기</button>
+  </div>
+</header>
+
+<div id="notice" class="notice" role="status" hidden></div>
+<section id="summary" class="summary" aria-label="법정 기준 판정"></section>
+
+<main>
+  <section id="tab-year" class="tab on">
+    <div id="planner" class="planner" role="grid" aria-label="연간 학사일정"></div>
+    <footer class="legend" id="legend"></footer>
+  </section>
+
+  <section id="tab-daily" class="tab" hidden>
+    <div class="dailybar">
+      <div id="semTabs" class="seg" role="group" aria-label="학기"><button data-sem="1" aria-pressed="true">1학기</button><button data-sem="2" aria-pressed="false">2학기</button></div>
+      <div class="dlegend"><span><i class="c-cer"></i>행사</span><span><i class="c-adapt"></i>입학초기</span><span><i class="c-up"></i>늘림</span><span><i class="c-down"></i>줄임</span><span><i class="c-sun"></i>수능</span><span><i class="c-hol"></i>공휴일</span><span><i class="c-temp"></i>임시공휴일</span><span><i class="c-clo"></i>자율휴업</span></div>
+      <span class="hint muted">마우스를 올리면 날짜 표시 · 클릭하여 교시 수정 · Enter 아래 주 · Tab 오른쪽</span>
+    </div>
+    <div class="scroll"><table id="dailyTable" class="daily"></table></div>
+  </section>
+
+  <section id="tab-weeks" class="tab" hidden>
+    <div class="scroll"><table id="weekTable" class="data"></table></div>
+  </section>
+
+  <section id="tab-settings" class="tab" hidden>
+    <div class="settings" id="settings"></div>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer" hidden aria-label="선택한 날"></aside>
+<div id="dailyDateTip" class="daily-date-tip" role="tooltip" hidden></div>
+
+<div id="onboard" class="onboard" hidden>
+  <div class="ob-panel" role="dialog" aria-labelledby="obTitle">
+    <h1 id="obTitle">학사일정·수업시수 계산기 <small class="muted">김해외동초</small></h1>
+    <p class="muted">처음 한 번만 정하면 됩니다. 나중에 설정에서 모두 바꿀 수 있습니다.</p>
+    <ol class="ob-steps">
+      <li><div class="ob-h">시트 저장 비밀번호 <span class="muted">(담당자만)</span></div><div class="ob-row"><input id="obPw" class="ob-in" type="password" placeholder="담당자 비밀번호" autocomplete="current-password"><span id="obCloud" class="muted">비워 두면 이 브라우저에만 저장합니다. 나중에 설정에서 넣어도 됩니다.</span></div></li>
+      <li><div class="ob-h">학교 이름</div><input id="obSchool" class="ob-in" placeholder="예: ○○초등학교" autocomplete="organization"></li>
+      <li><div class="ob-h">학년도와 종업 방식</div><div class="ob-row"><select id="obYear"></select>
+        <label class="opt"><input type="radio" name="obMode" value="dec">12월 종업</label><label class="opt"><input type="radio" name="obMode" value="jan">1월 종업</label><label class="opt"><input type="radio" name="obMode" value="feb" checked="">2월 종업</label></div>
+        <div id="obDecember" hidden><label class="field">12월 종업일<input id="obEndDate" type="date" required="" aria-describedby="obDecemberHint" disabled=""></label><p id="obDecemberHint" class="muted">12월 중 수업 가능한 날짜를 선택하세요. 종업일은 고정하고, 목표 수업일수에 맞춰 초안의 여름방학 기간을 조정합니다.</p></div></li>
+      <li><div class="ob-h">작년 이수 시수 <span class="muted">(모르면 비워 두세요)</span></div>
+        <p class="muted">2·4·6학년은 작년(1·3·5학년 때) 실제 이수 시수가 있어야 학년군 기준을 판정합니다. 나이스 기록을 보고 넣으세요.</p>
+        <div class="ob-row"><label class="field">2학년<input id="obPrev2" type="number" min="0" placeholder="예: 870"></label><label class="field">4학년<input id="obPrev4" type="number" min="0" placeholder="예: 986"></label><label class="field">6학년<input id="obPrev6" type="number" min="0" placeholder="예: 1088"></label></div></li>
+    </ol>
+    <button class="btn primary ob-go" id="obStart" type="button">시작하기 (Enter)</button>
+    <p class="credit"><button class="btn text" id="obHelp" type="button">사용법 보기</button> · 원작: 서울신답초등학교 정용석</p>
+  </div>
+</div>
+
+<div id="help" class="onboard" hidden>
+  <div class="help-panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="help-head"><h1 id="helpTitle">사용법</h1><button class="btn text" data-help-close="">닫기 (Esc)</button></div>
+    <div class="help-body">
+      <nav class="help-nav" aria-label="사용법 목차">
+        <button data-h="start" aria-current="true">처음 시작</button>
+        <button data-h="year">연간 한눈에</button>
+        <button data-h="day">날짜 처리</button>
+        <button data-h="daily">일별 시수</button>
+        <button data-h="weeks">주별 시수</button>
+        <button data-h="settings">설정</button>
+        <button data-h="rule">판정 기준</button>
+        <button data-h="temp">임시공휴일이 생기면</button>
+        <button data-h="excel">엑셀 내보내기</button>
+        <button data-h="save">저장과 주의</button>
+      </nav>
+      <div class="help-content">
+        <section data-hs="start">
+          <h2>처음 시작</h2>
+          <ol>
+            <li><b>시트 저장 비밀번호</b>를 넣습니다(담당자). 이후 고칠 때마다 구글시트에 학년도별로 자동 저장되고, 이 브라우저에도 백업됩니다.</li>
+            <li><b>학교 이름</b>을 넣습니다. 화면과 엑셀 제목에 쓰입니다.</li>
+            <li><b>학년도와 종업 방식</b>(12월 종업 / 1월 종업 / 2월 종업)을 고르면 그해 공휴일에 맞춘 초안이 만들어집니다. <b>12월 종업</b>은 그달 안에서 종업일을 직접 고릅니다. 선택한 종업일을 유지하면서 여름방학 기간을 조정해 목표 수업일수를 맞춥니다.</li>
+            <li><b>작년 이수 시수</b>(2·4·6학년)를 나이스 기록대로 넣습니다. 모르면 비워 두고 나중에 설정에서 넣어도 됩니다.</li>
+          </ol>
+          <p>다음 해에는 시트에 있는 작년 자료에서 작년 시수를 자동으로 가져오고, 맞는지 확인하는 안내가 뜹니다.</p>
+        </section>
+        <section data-hs="year" hidden>
+          <h2>연간 한눈에</h2>
+          <p>3월부터 다음 해 2월까지 12개월을 한 화면에 보여 줍니다. 같은 요일이 세로로 맞춰져 있어 휴일과 방학의 흐름이 바로 보입니다.</p>
+          <ul>
+            <li>각 줄 오른쪽 숫자: 그달 <b>수업일수</b>와 <b>학년별 시수</b></li>
+            <li>위쪽 판정 띠: 연간 수업일수와 학년별 시수 판정(충족·여유 0·주의·미달)</li>
+            <li><b>방학일수</b>: 주말·공휴일을 포함한 방학 기간의 전체 날짜 수입니다. 1학기는 여름방학, 2학기는 겨울방학과 종업 다음 날부터 다음 해 2월 말까지를 합산합니다. 방학식·개학일은 제외합니다.</li>
+            <li>색: 분홍 공휴일, 점선 자율휴업일, 빗금 방학, 남색 행사(시업·방학식·개학·종업), 연두 수능, 모서리 주황 삼각형은 기준과 다른 교시인 날</li>
+          </ul>
+        </section>
+        <section data-hs="day" hidden>
+          <h2>날짜 처리</h2>
+          <p>날짜 칸을 누르면 오른쪽 서랍이 열립니다.</p>
+          <ol>
+            <li>처리 방식을 고릅니다: <b>수업일 · 자율휴업일 · 임시공휴일 · 시수 조정·행사</b></li>
+            <li>시수 조정이면 학년별 교시를 넣고 사유를 적습니다.</li>
+            <li><b>적용하면</b> 표에서 그달·연간 수업일수와 학년별 시수가 어떻게 바뀌는지 먼저 확인합니다.</li>
+            <li>법정 기준보다 모자라게 되면 <b>부족분 채우기</b> 후보가 함께 나옵니다. <b>보충안까지 적용</b>을 누르면 한 번에 반영됩니다.</li>
+          </ol>
+          <p>기본 공휴일을 누르면 그 공휴일을 빼거나 되돌릴 수 있습니다. Enter는 적용, Esc는 닫기입니다.</p>
+        </section>
+        <section data-hs="daily" hidden>
+          <h2>일별 시수</h2>
+          <p>주마다 학년별 월~금 교시와 합계를 보여 주는 표입니다(원본 엑셀의 일별 시트와 같은 구조). 1학기·2학기 버튼으로 바꿔 봅니다.</p>
+          <ul>
+            <li>숫자 칸을 누르거나 숫자를 바로 치면 고칠 수 있습니다. <b>Enter</b>는 다음 주 같은 요일, <b>Tab</b>은 오른쪽 칸, <b>Esc</b>는 취소입니다.</li>
+            <li>체험학습처럼 하루에 몰아서 운영할 때는 해당 날짜·학년을 <b>8교시</b>로 직접 바꿀 수 있습니다. 설정의 하루 최대 교시는 자동 보충 제안에만 적용되며, 직접 입력한 값은 그대로 유지됩니다.</li>
+            <li>고친 값은 판정 띠, 연간 화면, 주별 시수, 엑셀에 모두 바로 반영됩니다.</li>
+            <li>쉬는 날 칸(분홍·빗금)을 누르면 날짜 처리 서랍이 열립니다.</li>
+            <li>아래쪽에 학기 계(요일별 합계 포함)와 월별 시수가 있습니다.</li>
+          </ul>
+        </section>
+        <section data-hs="weeks" hidden>
+          <h2>주별 시수</h2>
+          <p>주마다 수업일과 학년별 주간 시수, 그 주에 쉬는 평일을 한 줄로 보여 줍니다. 학기 계와 연간 합계가 함께 나옵니다.</p>
+        </section>
+        <section data-hs="settings" hidden>
+          <h2>설정</h2>
+          <ul>
+            <li><b>저장</b>: 시트 저장 비밀번호, 이 기기 이름, 파일 내려받기·불러오기, 완전 초기화</li>
+            <li><b>학년도 날짜</b>: 시업일, 여름방학식, 2학기 개학, 겨울방학식, 겨울 개학, 종업일. 방학식·종업일 당일은 수업일입니다. <b>초안 다시 만들기</b>는 두 번 눌러야 실행됩니다.</li>
+            <li><b>12월 종업</b>: 초안 방식에서 고른 뒤 12월 중 종업일을 지정합니다. 겨울 개학은 두지 않습니다. 기존 종업일을 겨울 개학 전으로 앞당겨도 충돌하는 겨울방학식·겨울 개학일은 자동으로 비웁니다. 직접 날짜를 고칠 때는 여름방학을 그대로 두므로 수업일수 부족 여부를 확인하세요.</li>
+            <li><b>수능일 처리</b>: 정상 수업 / 1교시 빼기 / 자율휴업일</li>
+            <li><b>작년 이수 시수</b>: 2·4·6학년 학년군 판정에 쓰입니다.</li>
+            <li><b>요일별 기준 시수</b>: 학년별 월~금 교시와, 보충 제안 때 넘지 않을 하루 최대 교시. 기본은 1·2학기 동일하며, 다를 때만 꺾쇠를 펼쳐 2학기의 다른 칸을 입력합니다. 빈칸은 공통 기준을 따릅니다.</li>
+            <li><b>자율휴업일</b>: 목록과 징검다리 평일(앞뒤가 쉬는 날) 후보</li>
+            <li><b>공휴일 목록</b>: 바뀐 공휴일은 빼거나 더합니다.</li>
+          </ul>
+        </section>
+        <section data-hs="rule" hidden>
+          <h2>판정 기준</h2>
+          <ul>
+            <li><b>수업일수</b>: 매 학년 190일 이상(초·중등교육법 시행령 제45조)</li>
+            <li><b>학년군 최소 시수</b>(2022 개정 교육과정, 2년 합): 1~2학년 1,744 · 3~4학년 1,972 · 5~6학년 2,176</li>
+            <li><b>2·4·6학년</b>: 작년 이수 시수 + 올해 시수가 기준 이상이면 충족, 같으면 여유 0, 모자라면 미달</li>
+            <li><b>1·3·5학년</b>: 법정 판정 대상은 아니며, 2년 기준의 절반을 목표로 보고 내년에 필요한 시수를 안내합니다.</li>
+          </ul>
+          <p>공휴일은 2026년 개정 규정(노동절·제헌절 공휴일, 대체공휴일 적용) 기준입니다. 2029년 이후 선거일과 수능일은 추정 날짜라 발표 후 확인이 필요합니다.</p>
+        </section>
+        <section data-hs="temp" hidden>
+          <h2>임시공휴일이 생기면</h2>
+          <ol>
+            <li>연간 화면에서 그 날짜를 누르고 <b>임시공휴일</b>을 고릅니다(설정의 공휴일 추가로도 됩니다).</li>
+            <li>줄어드는 수업일수와 학년별 시수가 바로 계산됩니다.</li>
+            <li><b>부족분 채우기</b> 후보 중 하나를 고르면 됩니다. 종업일·방학식을 하루 옮기는 안, 자율휴업일을 되돌리는 안, 일부 날에 교시를 더하는 안이 있습니다.</li>
+          </ol>
+          <p>판정 띠의 <b>미달</b> 배지를 눌러도 같은 후보를 볼 수 있습니다.</p>
+        </section>
+        <section data-hs="excel" hidden>
+          <h2>엑셀 내보내기</h2>
+          <p>위쪽 <b>엑셀 내보내기</b>를 누르면 3개 시트가 담긴 파일이 만들어집니다. 파일은 내려받기로 받습니다.</p>
+          <p>파일명에 내보낸 날짜·시각(컴퓨터의 현지 시각)이 붙어 작업본을 구별할 수 있습니다. 예: <b>2027학년도_학사일정_학교명_20261026_154530.xlsx</b>. 같은 초에 다시 내보내면 순번이 붙습니다.</p>
+          <ul>
+            <li><b>달력</b>: 12개월 달력, 날짜 색, 월별 수업일, 월별 행사·휴일 메모</li>
+            <li><b>전학년 수업시수(일별)</b>: 주별 학년 교시와 합계, 학기 계, 월별, 학년군 판정</li>
+            <li><b>전학년 수업시수(주별)</b>: 일별 시트를 참조하는 주별 합계</li>
+          </ul>
+          <p>합계는 엑셀 수식이라, 엑셀에서 숫자를 고쳐도 합계가 맞춰집니다.</p>
+        </section>
+        <section data-hs="save" hidden>
+          <h2>저장과 주의</h2>
+          <ul>
+            <li>자료는 학교 구글시트(담당자 계정)에 저장되고, 이 브라우저에도 백업됩니다. 시트에 저장하려면 담당자 비밀번호가 필요합니다.</li>
+            <li>집과 학교에서 동시에 열어 두었다가 한쪽에서 저장하면, 다른 쪽은 저장할 때(또는 창으로 돌아올 때) <b>충돌 안내</b>를 띄웁니다. <b>시트 것 불러오기</b> 또는 <b>내 것으로 시트 덮어쓰기</b>를 고르세요. 헷갈리면 먼저 <b>내 내용 파일로 받아 두기</b>를 누르세요.</li>
+            <li>인터넷이 끊기면 이 브라우저에 저장해 두었다가, 다시 연결되면 시트에 올립니다.</li>
+            <li>교직원은 <b>보기 전용 페이지</b>(view.html)에서 달력·판정·주별 시수를 보고 엑셀을 받을 수 있습니다. 보기 페이지에서는 저장되지 않습니다.</li>
+            <li><b>완전 초기화</b>는 이 브라우저의 백업과 비밀번호를 지웁니다. 구글시트의 자료는 남습니다.</li>
+            <li>작년 시수를 작년 파일에서 가져온 경우 계획값이므로, 나이스의 실제 이수 시수와 같은지 확인하세요.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>window.HAKSA_VIEW = true;</script>
+<script src="config.js"></script>
+<script src="holidays.js"></script>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="export.js"></script>
+<script src="app.js"></script>
+</body></html>
