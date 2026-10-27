@@ -27,6 +27,8 @@ Range.prototype.getValues = function () {
   return out;
 };
 Range.prototype.getValue = function () { return this.getValues()[0][0]; };
+Range.prototype.getDisplayValues = function () { return this.getValues().map(function (r) { return r.map(String); }); };
+Sheet.prototype.getName = function () { return this.name; };
 Range.prototype.setValues = function (vals) {
   if (vals.length !== this.nr || vals[0].length !== this.nc) throw new Error('범위 크기와 값의 크기가 다릅니다');
   if (this.c + this.nc - 1 > this.sh.maxCols) throw new Error('열이 부족합니다');
@@ -56,8 +58,17 @@ function createGas(opts) {
     deleteSheet: function (s) { sheets.splice(sheets.indexOf(s), 1); }
   };
   var props = { EDIT_PASSWORD: opts.password === undefined ? 'test-pw' : opts.password }, cache = {};
+  // 게시판: opts.board 가 있으면 그 값을 '기초시간표, 전담시간표, 특별실' 탭으로, 없으면 권한 없음
+  var boardSheet = new Sheet('기초시간표, 전담시간표, 특별실');
+  (opts.board || []).forEach(function (r, i) { r.forEach(function (v, j) { boardSheet.set(i + 1, j + 1, v); }); });
+  boardSheet.maxCols = 60;
+  var board = { getName: function () { return '2026 외동 게시판'; }, getSheets: function () { return [new Sheet('링크모음'), boardSheet]; } };
   var ctx = {
-    SpreadsheetApp: { getActiveSpreadsheet: function () { return ss; } },
+    SpreadsheetApp: {
+      getActiveSpreadsheet: function () { return ss; },
+      openById: function (id) { if (!opts.board) throw new Error('Exception: You do not have permission'); return board; }
+    },
+    Logger: { log: function () {} },
     LockService: { getScriptLock: function () { return { waitLock: function () {}, releaseLock: function () {} }; } },
     PropertiesService: { getScriptProperties: function () { return { getProperty: function (k) { return props[k] || null; } }; } },
     CacheService: { getScriptCache: function () { return { get: function (k) { return cache[k] || null; }, put: function (k, v) { cache[k] = v; } }; } },

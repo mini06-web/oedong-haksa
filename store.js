@@ -43,6 +43,14 @@
     return req('POST', null, { action: 'save', pw: password(), year: year, state: state, base: base || 0, force: !!force, device: device() })
       .then(function (o) { return o.conflict ? { conflict: true, remote: o.remote } : { ok: true, savedAt: o.savedAt }; });
   }
+  // 시간표(교사 이름이 있어 읽기도 비밀번호): null | { year, data, savedAt, savedBy }
+  function ttGet(year) { return req('POST', null, { action: 'ttGet', pw: password(), year: year }).then(function (o) { return o.data || null; }); }
+  function ttSave(year, data, base, force) {
+    return req('POST', null, { action: 'ttSave', pw: password(), year: year, data: data, base: base || 0, force: !!force, device: device() })
+      .then(function (o) { return o.conflict ? { conflict: true, remote: o.remote } : { ok: true, savedAt: o.savedAt }; });
+  }
+  // 「외동 게시판」 기초시간표 탭 값: { title, sheet, values }
+  function board() { return req('POST', null, { action: 'board', pw: password() }); }
   // 비밀번호 확인: true | false (연결 실패는 reject)
   function check(pw) {
     return req('POST', null, { action: 'check', pw: pw }).then(function () { return true; }, function (e) { if (e.message === 'auth') return false; throw e; });
@@ -78,7 +86,7 @@
 
   window.Store = {
     configured: function () { return !!url(); },
-    list: list, get: get, save: save, check: check,
+    list: list, get: get, save: save, check: check, ttGet: ttGet, ttSave: ttSave, board: board,
     password: password, setPassword: setPassword, device: device, setDevice: setDevice,
     fileName: fileName, download: download, downloadBlob: downloadBlob, readFile: readFile
   };

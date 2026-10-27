@@ -19,9 +19,9 @@ check('처음에는 학년도 목록이 비어 있음', function () {
   assert.deepStrictEqual(gas.get({ action: 'list' }), { ok: true, years: [] });
   assert.strictEqual(gas.get({ action: 'get', year: '2027' }).data, null);
 });
-check('setup: 학사일정·저장기록·안내 탭을 만들고 빈 시트1은 지움', function () {
+check('setup: 학사일정·시간표·저장기록·안내 탭을 만들고 빈 시트1은 지움', function () {
   gas.setup();
-  assert.deepStrictEqual(gas.sheets.map(function (s) { return s.name; }).sort(), ['안내', '저장기록', '학사일정']);
+  assert.deepStrictEqual(gas.sheets.map(function (s) { return s.name; }).sort(), ['시간표', '안내', '저장기록', '학사일정']);
 });
 check('비밀번호가 틀리면 확인·저장 모두 거부', function () {
   assert.deepStrictEqual(gas.post({ action: 'check', pw: 'nope' }), { ok: false, error: 'auth' });
@@ -93,6 +93,40 @@ check('학년도와 자료가 맞지 않거나 형식이 틀리면 거부', func
 check('저장기록 탭에 저장·충돌·실패가 남음', function () {
   var log = gas.ss.getSheetByName('저장기록').grid.slice(1).map(function (r) { return r[3]; });
   ['저장', '충돌(저장 안 함)', '덮어쓰기 저장', '저장 거부(비밀번호)', '비밀번호 확인 실패'].forEach(function (k) { assert.ok(log.indexOf(k) >= 0, k + ' 없음'); });
+});
+check('setup: 시간표 탭도 만듦', function () {
+  assert.ok(gas.ss.getSheetByName('시간표'));
+});
+check('시간표 읽기·저장은 비밀번호가 있어야 함', function () {
+  assert.strictEqual(gas.post({ action: 'ttGet', pw: 'x', year: 2027 }).error, 'auth');
+  assert.strictEqual(gas.post({ action: 'ttGet', pw: PW, year: 2027 }).data, null);
+});
+var tt = { version: 1, classes: [{ cls: '3-1', grade: 3, teacher: '담임07' }], teachers: [], sem: { 1: {}, 2: {} } }, tt1;
+check('시간표 저장 → 읽기, 학사일정 줄과 섞이지 않음', function () {
+  tt1 = gas.post({ action: 'ttSave', pw: PW, year: 2027, data: tt, base: 0, device: '집' });
+  assert.ok(tt1.ok, JSON.stringify(tt1));
+  var d = gas.post({ action: 'ttGet', pw: PW, year: 2027 }).data;
+  assert.deepStrictEqual(d.data, tt); assert.strictEqual(d.savedBy, '집');
+  assert.strictEqual(gas.get({ action: 'get', year: 2027 }).data.state.year, 2027);
+  assert.deepStrictEqual(gas.get({ action: 'list' }).years.map(function (y) { return y.year; }), [2026, 2027, 2028]);
+});
+check('시간표도 예전 base 로 저장하면 충돌', function () {
+  var r = gas.post({ action: 'ttSave', pw: PW, year: 2027, data: tt, base: tt1.savedAt - 1, device: '학교' });
+  assert.strictEqual(r.conflict, true); assert.deepStrictEqual(r.remote.data, tt);
+  assert.strictEqual(gas.post({ action: 'ttSave', pw: PW, year: 2027, data: { nope: 1 }, base: tt1.savedAt }).ok, false);
+});
+check('게시판 읽기: 권한이 없으면 안내 문장', function () {
+  assert.ok(/보기 권한/.test(gas.post({ action: 'board', pw: PW }).error));
+});
+check('게시판 읽기: 기초시간표 탭 값을 문자열로 돌려줌(비밀번호 필요)', function () {
+  var g = createGas({ board: require('./board-sample') });
+  assert.strictEqual(g.post({ action: 'board', pw: 'x' }).error, 'auth');
+  var b = g.post({ action: 'board', pw: PW });
+  assert.ok(b.ok, JSON.stringify(b).slice(0, 200));
+  assert.strictEqual(b.sheet, '기초시간표, 전담시간표, 특별실');
+  assert.strictEqual(b.values[3][0], '1-1');
+  var T = require('../timetable.js');
+  assert.strictEqual(T.parseBoard(b.values).classes.length, 18);
 });
 check('비밀번호를 20번 틀리면 맞는 비밀번호도 잠시 막음', function () {
   var g2 = createGas();

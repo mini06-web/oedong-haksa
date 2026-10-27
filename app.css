@@ -319,3 +319,22 @@ table.data tr.mstart td { border-top: 2px solid var(--line-strong); }
 .view-only .chip.link, .view-only .chip.link-bad { pointer-events: none; text-decoration: none; cursor: default; }
 .view-only .chip.link-bad::after { content: none; }
 .view-only #saveState { cursor: pointer; }
+
+/* ---------- 김해외동초 2단계: 담임·전담 탭 ---------- */
+.staff { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 1rem; }
+.staff .notice { border: 1px solid #F0C2BD; border-radius: var(--r); }
+.ttbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.ttbar h2 { margin-right: auto; }
+.ttscroll { overflow: auto; max-height: 60vh; border: 1px solid var(--line); border-radius: 6px; }
+.ttscroll.short { max-height: 40vh; }
+.staff table.data th small { font-weight: 400; color: var(--ink-3); }
+.staff td.ttdiff { color: #9A3412; font-weight: 700; }
+.ttwarn { margin: 0; padding-left: 1.2rem; font-size: .85rem; color: #7A1A12; }
+.ttnote { font-size: .85rem; }
+.staff h3 { margin: .5rem 0 0; font-size: 1rem; }
+table.ttgrid { width: auto; }
+table.ttgrid td { text-align: center; vertical-align: top; min-width: 6.5rem; }
+table.ttgrid td div { font-weight: 600; margin-bottom: .15rem; }
+table.ttgrid td.ttspec { background: #EEF2F7; }
+table.ttgrid select { font: inherit; font-size: .8rem; max-width: 6.5rem; }
+.staff details > summary { cursor: pointer; }
