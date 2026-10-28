@@ -229,9 +229,13 @@
       return '<span class="chip ' + (x.ok ? 'ok' : 'bad') + '" title="' + esc(x.teacher) + '">' + x.cls + ' ' + x.hours + (x.ok ? '' : '/' + x.expected) + '</span>';
     }).join(' ') + '</p>';
     h += cf.length ? '<ul class="ttwarn">' + cf.map(function (x) { return '<li>' + esc(x.teacher) + ' ' + x.day + ' ' + x.period + '교시에 ' + x.classes.join(', ') + ' 겹침</li>'; }).join('') + '</ul>' : '<p>같은 시간에 두 반에 배정된 전담 교사는 없습니다.</p>';
-    h += '<table class="data"><tr><th class="l">교사</th><th>주당</th><th class="l">학급별</th></tr>' + tt.teachers.map(function (t) {
+    // 전담 배정 탭의 계획(같은 학년도)이 있으면 견줘 보여 줌
+    var plan = {}, sf = window.Staff && Staff.of(api.getState());
+    if (sf) sf.teachers.forEach(function (t) { plan[t.id] = Staff.load(t, editSem); });
+    h += '<table class="data"><tr><th class="l">교사</th><th>주당</th>' + (sf ? '<th>계획</th>' : '') + '<th class="l">학급별</th></tr>' + tt.teachers.map(function (t) {
       var m = wk[t.id] || {}, ks = Object.keys(m).sort(), n = ks.reduce(function (a, c) { return a + m[c]; }, 0);
-      return '<tr><td class="l">' + esc(t.name) + ' <small class="muted">' + esc(t.desc) + '</small></td><td>' + n + '</td><td class="l">' + ks.map(function (c) { return c + ' ' + m[c]; }).join(' · ') + '</td></tr>';
+      var pc = sf ? '<td>' + (plan[t.id] == null ? '<span class="muted">·</span>' : plan[t.id] === n ? plan[t.id] : '<span class="chip warn">' + plan[t.id] + '</span>') + '</td>' : '';
+      return '<tr><td class="l">' + esc(t.name) + ' <small class="muted">' + esc(t.desc) + '</small></td><td>' + n + '</td>' + pc + '<td class="l">' + ks.map(function (c) { return c + ' ' + m[c]; }).join(' · ') + '</td></tr>';
     }).join('') + '</table>';
     return h + '</details></section>';
   }
@@ -284,6 +288,8 @@
     init: function (a) { api = a; events(); },
     load: load,
     render: render,
-    data: function () { return tt; }
+    data: function () { return tt; },
+    year: function () { return year; },
+    setData: function (d) { tt = d; save(); render(); } // 전담 배정 탭에서 교사 목록 반영
   };
 })();

@@ -257,6 +257,7 @@
     if (!$('#tab-daily').hidden) renderDaily();
     if (!$('#tab-staff').hidden && window.TTUI) TTUI.render();
     if (window.ExtUI) ExtUI.render();
+    if (window.StaffUI) StaffUI.render(); // 보기 페이지에서는 공개 여부로 탭을 보이고 숨김
     if (!$('#tab-settings').hidden && !keepSettings) renderSettings();
     if (selected) renderDrawer();
     else if (fixMode) renderFix();
@@ -936,12 +937,13 @@
     hideDailyDate();
     if (tab === 'prev') { go('settings'); var p = $('[data-prev="2"]'); if (p) p.focus(); return; }
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
-    ['year', 'daily', 'weeks', 'staff', 'compare', 'tools', 'settings'].forEach(function (k) { var t = $('#tab-' + k); if (t) t.hidden = k !== tab; });
+    ['year', 'daily', 'weeks', 'staff', 'assign', 'compare', 'tools', 'settings'].forEach(function (k) { var t = $('#tab-' + k); if (t) t.hidden = k !== tab; });
     if (selected) closeDrawer();
     if (tab === 'weeks') renderWeeks();
     if (tab === 'daily') renderDaily();
     if (tab === 'staff' && window.TTUI) TTUI.render();
     if ((tab === 'compare' || tab === 'tools') && window.ExtUI) ExtUI.render();
+    if (tab === 'assign' && window.StaffUI) StaffUI.render();
     if (tab === 'settings') renderSettings();
   }
 
@@ -1032,7 +1034,11 @@
           Object.keys(prev).forEach(function (g) { state.prevYear[g] = prev[g]; });
           $('#schoolName').value = state.school.name; $('#yearSel').value = String(year);
           return linkPrevYear();
-        }).then(function () { el.hidden = true; firstRun = false; recompute(); save(); renderNotice(); });
+        }).then(function () {
+          el.hidden = true; firstRun = false; recompute(); save(); renderNotice();
+          if (window.TTUI) TTUI.load(state.year); // 처음 시작에서도 시간표 모듈에 학년도를 알려 줌(없으면 가져온 시간표가 연도 없이 저장됨)
+          if (window.ExtUI) ExtUI.load();
+        });
       });
     }
     $('#obStart').onclick = start;
@@ -1056,6 +1062,10 @@
       getState: function () { return state; }, getResult: function () { return result; }, commit: commit,
       canWrite: function () { return canWrite && cloud === 'on'; }, cloudState: function () { return cloud; },
       otherYear: otherYear, esc: esc, fmt: fmt, md: md
+    });
+    if (window.StaffUI) StaffUI.init({
+      getState: function () { return state; }, commit: commit,
+      canWrite: function () { return canWrite && cloud === 'on'; }, esc: esc
     });
     sel.addEventListener('change', function () { undoState = null; if (VIEW) store('haksa:viewYear', sel.value); openYear(+sel.value); });
     $('#schoolName').addEventListener('change', save);

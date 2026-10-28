@@ -22,6 +22,7 @@
     <button role="tab" data-tab="daily" aria-selected="false">일별 시수</button>
     <button role="tab" data-tab="weeks" aria-selected="false">주별 시수</button>
     <button role="tab" data-tab="staff" aria-selected="false">담임·전담</button>
+    <button role="tab" data-tab="assign" aria-selected="false" hidden>전담 배정</button>
     <button role="tab" data-tab="settings" aria-selected="false">설정</button>
   </nav>
   <div class="actions">
@@ -55,6 +56,10 @@
 
   <section id="tab-staff" class="tab" hidden>
     <div class="staff" id="staff"></div>
+  </section>
+
+  <section id="tab-assign" class="tab" hidden>
+    <div class="staff" id="assign"></div>
   </section>
 
   <section id="tab-settings" class="tab" hidden>
@@ -214,5 +219,7 @@
 <script src="export.js"></script>
 <script src="timetable.js"></script>
 <script src="ttui.js"></script>
+<script src="staff.js"></script>
+<script src="staffui.js"></script>
 <script src="app.js"></script>
 </body></html>

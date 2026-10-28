@@ -338,3 +338,8 @@ table.ttgrid td div { font-weight: 600; margin-bottom: .15rem; }
 table.ttgrid td.ttspec { background: #EEF2F7; }
 table.ttgrid select { font: inherit; font-size: .8rem; max-width: 6.5rem; }
 .staff details > summary { cursor: pointer; }
+
+/* 전담 배정(⑤) */
+.chkline { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; }
+.staffplan tr.thead td { background: #F6F6F3; border-top: 2px solid var(--line-strong); }
+.staffplan input, .staffplan select { border: 1px solid var(--line-strong); border-radius: 5px; padding: .2rem .35rem; background: var(--surface); font: inherit; }

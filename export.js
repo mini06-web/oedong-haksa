@@ -351,6 +351,48 @@
     GR.forEach(function (g, gi) { var col = colL(6 + gi); put(ws, col + row, formula(col + sums[1] + '+' + col + sums[2], r.totals.hours[g].total), { font: { bold: true, size: 12 } }); });
   }
 
+  // ---------- 4. 전담 배정(⑤, 있을 때만. 보기 페이지는 공개한 경우만) ----------
+  function sheetStaff(wb, r) {
+    var S = window.Staff, staff = S && S.of(r.state);
+    if (!staff || !staff.teachers.length || (window.HAKSA_VIEW && !staff.published)) return;
+    var s = r.state, ws = wb.addWorksheet('전담 배정', { views: [{ state: 'frozen', ySplit: 3, showGridLines: false }] });
+    ws.pageSetup = { orientation: 'portrait', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .3, right: .3, top: .4, bottom: .4, header: .2, footer: .2 } };
+    [12, 10, 6, 10, 8, 9, 9, 9, 9, 30].forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
+    ws.mergeCells('A1:J1');
+    put(ws, 'A1', s.year + '학년도 전담 배정' + (s.school.name ? ' · ' + s.school.name : ''), { font: { size: 18, bold: true, color: { argb: 'FFFFFFFF' } }, fill: C.title, border: false });
+    ws.getRow(1).height = 30;
+    ws.mergeCells('A2:J2');
+    put(ws, 'A2', '계 = 학급 수 × 학급당 주당 시간. 요일·교시 배치 전 계획이며 공식 시수와 관계없습니다.', { font: { size: 9, color: { argb: 'FF595959' } }, border: false, align: { horizontal: 'left' } });
+    ['교사', '종류', '학년', '과목', '학급 수', '1학기 학급당', '2학기 학급당', '1학기 계', '2학기 계', '맡은 수업'].forEach(function (h, i) { put(ws, colL(i + 1) + '3', h, { font: { bold: true }, fill: C.head, wrap: true }); });
+    var row = 4;
+    staff.teachers.forEach(function (t) {
+      var first = row;
+      (t.items.length ? t.items : [null]).forEach(function (x) {
+        put(ws, 'A' + row, row === first ? t.name : '', { font: { bold: true } });
+        put(ws, 'B' + row, row === first ? (t.kind === 'sports' ? '스포츠강사' : '전담') : '', {});
+        put(ws, 'C' + row, x ? x.grade : '', {}); put(ws, 'D' + row, x ? x.subject : '', {}); put(ws, 'E' + row, x ? x.n : '', {});
+        put(ws, 'F' + row, x ? x.h1 : '', {}); put(ws, 'G' + row, x ? x.h2 : '', {});
+        put(ws, 'H' + row, x ? formula('E' + row + '*F' + row, x.n * x.h1) : '', {}); put(ws, 'I' + row, x ? formula('E' + row + '*G' + row, x.n * x.h2) : '', {});
+        put(ws, 'J' + row, row === first ? S.describe(t) : '', { font: { size: 9 }, align: { horizontal: 'left' } });
+        row++;
+      });
+      ws.mergeCells('A' + row + ':G' + row);
+      put(ws, 'A' + row, t.name + ' 주당 합계' + (t.min != null || t.max != null ? ' (목표 ' + (t.min != null ? t.min : '') + '~' + (t.max != null ? t.max : '') + ')' : ''), { font: { bold: true }, fill: C.sumFill, align: { horizontal: 'right' } });
+      put(ws, 'H' + row, formula('SUM(H' + first + ':H' + (row - 1) + ')', S.load(t, 1)), { font: { bold: true, color: { argb: C.red } }, fill: C.sumFill });
+      put(ws, 'I' + row, formula('SUM(I' + first + ':I' + (row - 1) + ')', S.load(t, 2)), { font: { bold: true, color: { argb: C.red } }, fill: C.sumFill });
+      put(ws, 'J' + row, '', { fill: C.sumFill });
+      row++;
+    });
+    row++;
+    ['학년', '학급 수', '학급당 전담 1학기', '학급당 전담 2학기'].forEach(function (h, i) { put(ws, colL(i + 1) + row, h, { font: { bold: true }, fill: C.peach, wrap: true }); });
+    row++;
+    S.grades(staff).forEach(function (g) {
+      put(ws, 'A' + row, g.grade + '학년', { font: { bold: true } }); put(ws, 'B' + row, g.classes, {});
+      put(ws, 'C' + row, Math.round(g.avg1 * 10) / 10, {}); put(ws, 'D' + row, Math.round(g.avg2 * 10) / 10, {});
+      row++;
+    });
+  }
+
   function build(result, H) {
     if (!window.ExcelJS) return Promise.reject(new Error('ExcelJS 없음'));
     var wb = new window.ExcelJS.Workbook();
@@ -364,6 +406,7 @@
     var ref = sheetDaily(wb, result);
     if (ref.semRows[1] !== semRow[1] || ref.semRows[2] !== semRow[2]) throw new Error('row mismatch');
     sheetWeekly(wb, result, ref);
+    sheetStaff(wb, result);
     return wb.xlsx.writeBuffer();
   }
   var lastFileStem = '', sameSecondCount = 0;
