@@ -36,7 +36,7 @@
       else if (c) { tpl = X.sanitizeTemplates(c.data); localSave(false); tplInfo = (c.savedBy ? '「' + c.savedBy + '」에서 ' : '') + hm(c.savedAt) + ' 저장본'; }
       render();
     }, function (e) {
-      tplInfo = e && e.detail === '알 수 없는 요청' ? '시트 저장소(Apps Script)를 3단계용으로 업데이트해야 시트에 저장됩니다(설치안내 참고). 지금은 이 브라우저에만 저장합니다.'
+      tplInfo = e && e.detail === '알 수 없는 요청' ? '시트 저장소(Apps Script)를 업데이트해야 시트에 저장됩니다(설치안내 「최종 업데이트」 참고). 지금은 이 브라우저에만 저장합니다.'
         : '시트에서 읽지 못했습니다' + (e && e.detail ? '(' + e.detail + ')' : '') + '. 이 브라우저 자료를 씁니다.';
       render();
     });
